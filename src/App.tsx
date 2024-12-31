@@ -123,9 +123,9 @@ function App() {
   const [budgets, setBudgets] = useState<Budget[]>(mockBudgets);
   const [isMenuOpen, setIsMenuOpen] = useState(true);
 
-  const isAuthenticated = !!window.localStorage.getItem('authUser');
-  const storedUser = window.localStorage.getItem('authUser');
-  const currentUser = storedUser ? JSON.parse(storedUser) : null;
+  // const isAuthenticated = !!window.localStorage.getItem('authUser');
+  // const storedUser = window.localStorage.getItem('authUser');
+  // const currentUser = storedUser ? JSON.parse(storedUser) : null;
 
   // Función para cargar colecciones con onSnapshot
   const loadCollection = <T,>(
@@ -378,11 +378,13 @@ function App() {
             <Typography variant="h6" sx={{ flexGrow: 1 }}>
               Presupuesto - Claro
             </Typography>
+            {/*
             {isAuthenticated && (
               <Typography sx={{ marginRight: 2 }}>
                 {currentUser?.email ?? 'Sin email'}
               </Typography>
             )}
+            */}
             <IconButton color="inherit">
               <SettingsIcon />
             </IconButton>
@@ -430,6 +432,7 @@ function App() {
         >
           <Toolbar />
           <Routes>
+            {/*
             <Route
               path="/login"
               element={<LoginPage />}
@@ -450,6 +453,21 @@ function App() {
                 ) : (
                   <LoginPage />
                 )
+              }
+            />
+            */}
+            <Route
+              path="/"
+              element={
+                <BudgetsPage
+                  budgets={budgets}
+                  accounts={accounts}
+                  projects={projects}
+                  services={services}
+                  createBudget={createBudget}
+                  updateBudget={updateBudget}
+                  deleteBudget={deleteBudget}
+                />
               }
             />
             <Route
