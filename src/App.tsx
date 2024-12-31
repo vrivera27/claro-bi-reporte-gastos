@@ -98,12 +98,12 @@ const mockBudgets: Budget[] = [
 ];
 
 const firebaseConfig = {
-  apiKey: 'YOUR_API_KEY',
-  authDomain: 'YOUR_AUTH_DOMAIN',
-  projectId: 'test-data-c3704',
-  storageBucket: 'YOUR_STORAGE_BUCKET',
-  messagingSenderId: 'YOUR_MESSAGING_SENDER_ID',
-  appId: 'YOUR_APP_ID'
+  apiKey: 'AIzaSyBJamNd0DqZOia7unl2ylZHkWU31m60-LY',
+  authDomain: 'interfaz-de-presupuetos.firebaseapp.com',
+  projectId: 'interfaz-de-presupuetos',
+  storageBucket: '"interfaz-de-presupuetos.firebasestorage.app',
+  messagingSenderId: '332576882697',
+  appId: '1:332576882697:web:fe42579c62496b69d2b8d8'
 };
 
 function App() {
