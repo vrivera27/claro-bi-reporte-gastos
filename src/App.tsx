@@ -114,7 +114,7 @@ async function pushAllBudgetsToBigQuery(allBudgets: Budget[]) {
   console.log('* Iniciando push de Budgets a BigQuery. Total:', allBudgets.length);
   const bigquery = new BigQuery({
     projectId: 'claro-consumo-grafana-d',
-    // keyFilename: 'service-account.json'
+    keyFilename: 'service-account.json'
   });
   await bigquery.dataset('billing_reports').table('budget').delete();
   await bigquery.dataset('billing_reports').table('budget').insert(allBudgets);
