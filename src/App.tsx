@@ -112,16 +112,19 @@ const firebaseConfig = {
 
 async function pushAllBudgetsToBigQuery(allBudgets: Budget[]) {
   console.log('* Iniciando push de Budgets a BigQuery. Total:', allBudgets.length);
-  const bigquery = new BigQuery({
-    projectId: 'claro-consumo-grafana-d',
-    keyFilename: 'service-account.json'
-  });
   try {
-    console.log('* Eliminando datos existentes en BigQuery...');
-    await bigquery.dataset('billing_reports').table('budget').delete();
-    console.log('* Insertando nuevos datos en BigQuery...');
-    await bigquery.dataset('billing_reports').table('budget').insert(allBudgets);
-    console.log('* Finalizado push de Budgets a BigQuery.');
+    const response = await fetch('https://<your-region>-<your-project-id>.cloudfunctions.net/pushAllBudgetsToBigQuery', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(allBudgets)
+    });
+    if (response.ok) {
+      console.log('* Finalizado push de Budgets a BigQuery.');
+    } else {
+      console.error('* Error durante el push a BigQuery:', await response.text());
+    }
   } catch (error) {
     console.error('* Error durante el push a BigQuery:', error);
   }
