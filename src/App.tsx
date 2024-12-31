@@ -98,12 +98,13 @@ const mockBudgets: Budget[] = [
 ];
 
 const firebaseConfig = {
-  apiKey: 'AIzaSyBJamNd0DqZOia7unl2ylZHkWU31m60-LY',
-  authDomain: 'interfaz-de-presupuetos.firebaseapp.com',
-  projectId: 'interfaz-de-presupuetos',
-  storageBucket: '"interfaz-de-presupuetos.firebasestorage.app',
-  messagingSenderId: '332576882697',
-  appId: '1:332576882697:web:fe42579c62496b69d2b8d8'
+  apiKey: "AIzaSyA15LOu9wpnJhWwqQFKABSVPUKyEOTLGo4",
+  authDomain: "claro---consumo-grafana---desa.firebaseapp.com",
+  projectId: "claro---consumo-grafana---desa",
+  storageBucket: "claro---consumo-grafana---desa.firebasestorage.app",
+  messagingSenderId: "891037117280",
+  appId: "1:891037117280:web:e909b096d64e01265b4c05",
+  measurementId: "G-H23JPDHMN4"
 };
 
 function App() {
