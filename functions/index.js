@@ -9,10 +9,23 @@ const app = express();
 app.use(cors({ origin: 'https://claro---consumo-grafana---desa.web.app' }));
 
 const { BigQuery } = require("@google-cloud/bigquery");
-const bigquery = new BigQuery();
+const bigquery = new BigQuery({
+  projectId: 'claro-consumo-grafana-d',
+  keyFilename: 'service-account.json'
+});
 
 const DATASET_ID = "billing_reports";
 const TABLE_ID = "budget";
+
+app.use((req, res, next) => {
+  res.set('Access-Control-Allow-Origin', 'https://claro---consumo-grafana---desa.web.app');
+  res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.set('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') {
+    return res.status(204).send('');
+  }
+  next();
+});
 
 app.post('/pushAllBudgetsToBigQuery', async (req, res) => {
   try {
