@@ -2,7 +2,11 @@ const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 admin.initializeApp();
 
-const cors = require('cors')({ origin: true });
+const corsHandler = require('cors')({
+  origin: 'https://claro---consumo-grafana---desa.web.app', 
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type']
+});
 const { BigQuery } = require("@google-cloud/bigquery");
 const bigquery = new BigQuery();
 
@@ -10,7 +14,8 @@ const DATASET_ID = "billing_reports";
 const TABLE_ID = "budget";
 
 exports.pushAllBudgetsToBigQuery = functions.https.onRequest((req, res) => {
-  cors(req, res, async () => {
+  corsHandler(req, res, async () => {
+    res.set('Access-Control-Allow-Origin', 'https://claro---consumo-grafana---desa.web.app');
     try {
       const allBudgets = req.body;
       functions.logger.info(`Presupuestos recibidos: ${allBudgets.length} documentos.`);
@@ -29,7 +34,6 @@ exports.pushAllBudgetsToBigQuery = functions.https.onRequest((req, res) => {
       await bigquery.dataset(DATASET_ID).table(TABLE_ID).insert(allBudgets, options);
       functions.logger.info(`Tabla ${TABLE_ID} recargada exitosamente en BigQuery.`);
 
-      res.set('Access-Control-Allow-Origin', '*');
       res.set('Access-Control-Allow-Methods', 'GET, POST');
       res.set('Access-Control-Allow-Headers', 'Content-Type');
 
