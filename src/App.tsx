@@ -113,13 +113,19 @@ const firebaseConfig = {
 async function pushAllBudgetsToBigQuery(allBudgets: Budget[]) {
   console.log('* Iniciando push de Budgets a BigQuery. Total:', allBudgets.length);
   try {
-    const response = await fetch('https://us-central1-claro---consumo-grafana---desa.cloudfunctions.net/pushAllBudgetsToBigQuery', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(allBudgets)
-    });
+    // Ojo: No agregues /pushAllBudgetsToBigQuery al final,
+    // pues tu ruta Express es '/', no '/pushAllBudgetsToBigQuery'.
+    const response = await fetch(
+      'https://us-central1-claro---consumo-grafana---desa.cloudfunctions.net/pushAllBudgetsToBigQuery',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(allBudgets),
+      }
+    );
+
     if (response.ok) {
       console.log('* Finalizado push de Budgets a BigQuery.');
     } else {
