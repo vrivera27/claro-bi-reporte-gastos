@@ -7,6 +7,7 @@
     "@mui/material": "^6.3.0",
     "@types/react": "^19.0.2",
     "browserify-fs": "^1.0.0",
+    "cors": "^2.8.5",
     "firebase": "^11.1.0",
     "firebase-admin": "^13.0.2",
     "firebase-functions": "^6.2.0",
@@ -24,6 +25,7 @@
     "@types/firebase": "^2.4.32",
     "@types/react-dom": "^19.0.2",
     "@types/react-router-dom": "^5.3.3",
+    "assert": "latest",
     "buffer": "latest",
     "crypto-browserify": "latest",
     "os-browserify": "^0.3.0",
@@ -31,8 +33,7 @@
     "querystring-es3": "^0.2.1",
     "react-app-rewired": "^2.2.1",
     "react-scripts": "^5.0.1",
-    "stream-browserify": "latest",
-    "assert": "latest"
+    "stream-browserify": "latest"
   },
   "scripts": {
     "start": "react-scripts start",
