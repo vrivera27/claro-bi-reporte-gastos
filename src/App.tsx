@@ -32,6 +32,7 @@ import AccountsPage from './pages/AccountsPage';
 import ProjectsPage from './pages/ProjectsPage';
 import ServicesPage from './pages/ServicesPage';
 import BudgetsPage from './pages/BudgetsPage';
+import LoginPage from './pages/LoginPage';
 import './App.css';
 
 interface Account {
@@ -94,7 +95,7 @@ const mockBudgets: Budget[] = [
     service: 'service-1',
     month: ['03'],
     budget: 3000
-  }
+  } 
 ];
 
 const firebaseConfig = {
@@ -121,6 +122,10 @@ function App() {
   const [services, setServices] = useState<Service[]>(mockServices);
   const [budgets, setBudgets] = useState<Budget[]>(mockBudgets);
   const [isMenuOpen, setIsMenuOpen] = useState(true);
+
+  const isAuthenticated = !!window.localStorage.getItem('authUser');
+  const storedUser = window.localStorage.getItem('authUser');
+  const currentUser = storedUser ? JSON.parse(storedUser) : null;
 
   // Función para cargar colecciones con onSnapshot
   const loadCollection = <T,>(
@@ -373,6 +378,11 @@ function App() {
             <Typography variant="h6" sx={{ flexGrow: 1 }}>
               Presupuesto - Claro
             </Typography>
+            {isAuthenticated && (
+              <Typography sx={{ marginRight: 2 }}>
+                {currentUser?.email ?? 'Sin email'}
+              </Typography>
+            )}
             <IconButton color="inherit">
               <SettingsIcon />
             </IconButton>
@@ -421,17 +431,25 @@ function App() {
           <Toolbar />
           <Routes>
             <Route
+              path="/login"
+              element={<LoginPage />}
+            />
+            <Route
               path="/"
               element={
-                <BudgetsPage
-                  budgets={budgets}
-                  accounts={accounts}
-                  projects={projects}
-                  services={services}
-                  createBudget={createBudget}
-                  updateBudget={updateBudget}
-                  deleteBudget={deleteBudget}
-                />
+                isAuthenticated ? (
+                  <BudgetsPage
+                    budgets={budgets}
+                    accounts={accounts}
+                    projects={projects}
+                    services={services}
+                    createBudget={createBudget}
+                    updateBudget={updateBudget}
+                    deleteBudget={deleteBudget}
+                  />
+                ) : (
+                  <LoginPage />
+                )
               }
             />
             <Route
