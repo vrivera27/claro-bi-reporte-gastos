@@ -9,25 +9,14 @@ const bigquery = new BigQuery();
 const DATASET_ID = "billing_reports";
 const TABLE_ID = "budget";
 
-/**
- * EJEMPLO: Función HTTP que recibe un array de budgets desde el front-end,
- *          borra la tabla en BigQuery (full replace) y la vuelve a insertar
- */
-exports.pushAllBudgetsToBigQuery = functions.https.onRequest(async (req, res) => {
-  if (req.method === 'OPTIONS') {
-    // Habilitar CORS para OPTIONS
-    res.set('Access-Control-Allow-Origin', '*');
-    res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    res.set('Access-Control-Max-Age', '3600');
-    return res.status(204).send('');
-  }
-
-  // Involucrar el middleware cors
-  cors(req, res, async () => {
+exports.pushAllBudgetsToBigQuery = functions.https.onRequest((req, res) => {
+  // Usamos cors(...) directamente en el callback,
+  // sin hacer el bloque if (req.method === 'OPTIONS')...
+  return cors(req, res, async () => {
     try {
+      // Este array es el que envías desde fetch(...)
       const allBudgets = req.body;
-      
+
       functions.logger.info(
         `Presupuestos recibidos: ${allBudgets.length} documentos.`
       );
@@ -35,7 +24,7 @@ exports.pushAllBudgetsToBigQuery = functions.https.onRequest(async (req, res) =>
       // Borramos la tabla en BigQuery (full replace)
       try {
         await bigquery.dataset(DATASET_ID).table(TABLE_ID).delete();
-        functions.logger.info(`Tabla ${TABLE_ID} eliminada en BigQuery.`);
+        functions.logger.info(`Tabla ${TABLE_ID} eliminada en BigQuery (full replace).`);
       } catch (err) {
         functions.logger.warn(
           `No se pudo borrar la tabla (quizá no existe). Error: `,
@@ -51,13 +40,14 @@ exports.pushAllBudgetsToBigQuery = functions.https.onRequest(async (req, res) =>
       await bigquery.dataset(DATASET_ID).table(TABLE_ID).insert(allBudgets, options);
       functions.logger.info(`Tabla ${TABLE_ID} recargada exitosamente en BigQuery.`);
 
-      return res.status(200).send({
+      // Devuelve OK (200)
+      return res.status(200).json({
         message: "Datos actualizados en BigQuery!",
-        total: allBudgets.length,
+        total: allBudgets.length
       });
     } catch (error) {
       functions.logger.error("Error actualizando tabla en BigQuery:", error);
-      return res.status(500).send({
+      return res.status(500).json({
         error: error.message || "Error desconocido"
       });
     }
