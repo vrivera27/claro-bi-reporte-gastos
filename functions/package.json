@@ -1,18 +1,17 @@
 {
     "name": "functions",
     "scripts": {
-      "lint": "eslint .",
-      "serve": "firebase emulators:start --only functions",
-      "deploy": "firebase deploy --only functions"
+        "lint": "eslint .",
+        "serve": "firebase emulators:start --only functions",
+        "deploy": "firebase deploy --only functions"
     },
     "dependencies": {
-      "firebase-admin": "^11.10.1",
-      "firebase-functions": "^3.24.0",
-      "@google-cloud/bigquery": "^7.9.1",
-      "cors": "^2.8.5"
+        "@google-cloud/bigquery": "^7.9.1",
+        "cors": "^2.8.5",
+        "firebase-admin": "^11.10.1",
+        "firebase-functions": "^6.2.0"
     },
     "engines": {
-      "node": "18"
+        "node": "18"
     }
-  }
-  
+}
