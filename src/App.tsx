@@ -111,18 +111,14 @@ const firebaseConfig = {
 };
 
 async function pushAllBudgetsToBigQuery(allBudgets: Budget[]) {
+  console.log('* Iniciando push de Budgets a BigQuery. Total:', allBudgets.length);
   const bigquery = new BigQuery({
     projectId: 'claro-consumo-grafana-d',
-    // keyFilename: 'service-account.json' // Ajustar según sea necesario
+    // keyFilename: 'service-account.json'
   });
-  await bigquery
-    .dataset('billing_reports')
-    .table('budget')
-    .delete();
-  await bigquery
-    .dataset('billing_reports')
-    .table('budget')
-    .insert(allBudgets);
+  await bigquery.dataset('billing_reports').table('budget').delete();
+  await bigquery.dataset('billing_reports').table('budget').insert(allBudgets);
+  console.log('* Finalizado push de Budgets a BigQuery.');
 }
 
 function App() {
@@ -222,6 +218,12 @@ function App() {
     try {
       const ref = doc(db, 'budget', id);
       await updateDoc(ref, updated);
+      const querySnapshot = await getDocs(collection(db, 'budget'));
+      const allBudgets = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Budget[];
+      await pushAllBudgetsToBigQuery(allBudgets);
     } catch (error) {
       setBudgets((prev) => prev.map((b) => (b.id === id ? { ...b, ...updated } : b)));
     }
@@ -231,6 +233,12 @@ function App() {
     try {
       const ref = doc(db, 'budget', id);
       await deleteDoc(ref);
+      const querySnapshot = await getDocs(collection(db, 'budget'));
+      const allBudgets = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Budget[];
+      await pushAllBudgetsToBigQuery(allBudgets);
     } catch (error) {
       setBudgets((prev) => prev.filter((b) => b.id !== id));
     }
