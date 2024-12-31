@@ -10,7 +10,8 @@ import {
   deleteDoc,
   doc,
   DocumentData,
-  QuerySnapshot
+  QuerySnapshot,
+  getDocs
 } from 'firebase/firestore';
 import {
   AppBar,
@@ -34,6 +35,7 @@ import ServicesPage from './pages/ServicesPage';
 import BudgetsPage from './pages/BudgetsPage';
 import LoginPage from './pages/LoginPage';
 import './App.css';
+import { BigQuery } from '@google-cloud/bigquery';
 
 interface Account {
   accountId: string;
@@ -95,7 +97,7 @@ const mockBudgets: Budget[] = [
     service: 'service-1',
     month: ['03'],
     budget: 3000
-  } 
+  }
 ];
 
 const firebaseConfig = {
@@ -108,14 +110,24 @@ const firebaseConfig = {
   measurementId: "G-H23JPDHMN4"
 };
 
+async function pushAllBudgetsToBigQuery(allBudgets: Budget[]) {
+  const bigquery = new BigQuery({
+    projectId: 'claro-consumo-grafana-d',
+    // keyFilename: 'service-account.json' // Ajustar según sea necesario
+  });
+  await bigquery
+    .dataset('billing_reports')
+    .table('budget')
+    .delete();
+  await bigquery
+    .dataset('billing_reports')
+    .table('budget')
+    .insert(allBudgets);
+}
+
 function App() {
-  console.log("Inicializando la app con el siguiente config de Firebase:", firebaseConfig);
-
   const app = initializeApp(firebaseConfig);
-  console.log("Firebase app inicializado. Procediendo a obtener Firestore...");
-
   const db = getFirestore(app);
-  console.log("Firestore obtenido:", db);
 
   const [accounts, setAccounts] = useState<Account[]>(mockAccounts);
   const [projects, setProjects] = useState<Project[]>(mockProjects);
@@ -123,38 +135,27 @@ function App() {
   const [budgets, setBudgets] = useState<Budget[]>(mockBudgets);
   const [isMenuOpen, setIsMenuOpen] = useState(true);
 
-  // const isAuthenticated = !!window.localStorage.getItem('authUser');
-  // const storedUser = window.localStorage.getItem('authUser');
-  // const currentUser = storedUser ? JSON.parse(storedUser) : null;
+  const isAuthenticated = !!window.localStorage.getItem('authUser');
+  const storedUser = window.localStorage.getItem('authUser');
+  const currentUser = storedUser ? JSON.parse(storedUser) : null;
 
-  // Función para cargar colecciones con onSnapshot
   const loadCollection = <T,>(
     collName: string,
     transform: (snap: QuerySnapshot<DocumentData>) => T[],
     setter: React.Dispatch<React.SetStateAction<T[]>>
   ) => {
-    console.log("Intentando cargar la colección:", collName);
-
     const unsub = onSnapshot(
       collection(db, collName),
       (snap) => {
-        console.log(`Snapshot recibido para la colección "${collName}". Cantidad de docs:`, snap.docs.length);
         const data = transform(snap);
-        console.log(`Data transformada para "${collName}":`, data);
         setter(data);
       },
-      (error) => {
-        console.error(`Error cargando la colección "${collName}":`, error);
-      }
+      () => {}
     );
-
     return unsub;
   };
 
-  // Efecto para cargar datos de Firestore
   useEffect(() => {
-    console.log("useEffect -> Iniciando suscripciones a las colecciones de Firestore...");
-
     const unsubAcc = loadCollection<Account>(
       'account',
       (snap) =>
@@ -195,9 +196,7 @@ function App() {
       setBudgets
     );
 
-    // Cleanup
     return () => {
-      console.log("useEffect -> Desmontando suscripciones...");
       unsubAcc();
       unsubProj();
       unsubServ();
@@ -205,62 +204,51 @@ function App() {
     };
   }, [db]);
 
-  /* Métodos de CRUD para budgets */
   const createBudget = async (newBudget: Omit<Budget, 'id'>) => {
-    console.log("Intentando crear un nuevo Budget en Firestore:", newBudget);
     try {
-      const ref = await addDoc(collection(db, 'budget'), newBudget);
-      console.log('Budget creado en Firestore. ID:', ref.id);
+      await addDoc(collection(db, 'budget'), newBudget);
+      const querySnapshot = await getDocs(collection(db, 'budget'));
+      const allBudgets = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Budget[];
+      await pushAllBudgetsToBigQuery(allBudgets);
     } catch (error) {
-      console.error("Error al crear Budget en Firestore. Insertando localmente:", error);
       setBudgets((prev) => [...prev, { ...newBudget, id: 'local-' + Date.now() }]);
     }
   };
 
   const updateBudget = async (id: string, updated: Partial<Budget>) => {
-    console.log(`Intentando actualizar Budget ID: ${id} en Firestore con:`, updated);
     try {
       const ref = doc(db, 'budget', id);
       await updateDoc(ref, updated);
-      console.log("Budget actualizado en Firestore.");
     } catch (error) {
-      console.error("Error al actualizar Budget en Firestore. Actualizando localmente:", error);
       setBudgets((prev) => prev.map((b) => (b.id === id ? { ...b, ...updated } : b)));
     }
   };
 
   const deleteBudget = async (id: string) => {
-    console.log(`Intentando eliminar Budget ID: ${id} en Firestore...`);
     try {
       const ref = doc(db, 'budget', id);
       await deleteDoc(ref);
-      console.log("Budget eliminado en Firestore.");
     } catch (error) {
-      console.error("Error al eliminar Budget en Firestore. Eliminando localmente:", error);
       setBudgets((prev) => prev.filter((b) => b.id !== id));
     }
   };
 
-  /* Métodos de CRUD para accounts */
   const createAccount = async (newAccount: Account) => {
-    console.log("Intentando crear Account en Firestore:", newAccount);
     try {
-      const ref = await addDoc(collection(db, 'account'), newAccount);
-      console.log('Cuenta creada en Firestore. ID:', ref.id);
+      await addDoc(collection(db, 'account'), newAccount);
     } catch (error) {
-      console.error("Error al crear Account en Firestore. Insertando localmente:", error);
       setAccounts((prev) => [...prev, newAccount]);
     }
   };
 
   const updateAccount = async (id: string, updated: Partial<Account>) => {
-    console.log(`Actualizando Account ID: ${id} en Firestore con:`, updated);
     try {
       const ref = doc(db, 'account', id);
       await updateDoc(ref, updated);
-      console.log("Cuenta actualizada en Firestore.");
     } catch (error) {
-      console.error("Error al actualizar Account en Firestore. Actualizando localmente:", error);
       setAccounts((prev) =>
         prev.map((acc) => (acc.accountId === id ? { ...acc, ...updated } : acc))
       );
@@ -268,25 +256,18 @@ function App() {
   };
 
   const deleteAccount = async (id: string) => {
-    console.log(`Eliminando Account ID: ${id} en Firestore...`);
     try {
       const ref = doc(db, 'account', id);
       await deleteDoc(ref);
-      console.log("Cuenta eliminada en Firestore.");
     } catch (error) {
-      console.error("Error al eliminar Account en Firestore. Eliminando localmente:", error);
       setAccounts((prev) => prev.filter((acc) => acc.accountId !== id));
     }
   };
 
-  /* Métodos de CRUD para projects */
   const createProject = async (newProject: Omit<Project, 'projectId'>) => {
-    console.log("Intentando crear Project en Firestore:", newProject);
     try {
-      const ref = await addDoc(collection(db, 'project'), newProject);
-      console.log('Proyecto creado en Firestore. ID:', ref.id);
+      await addDoc(collection(db, 'project'), newProject);
     } catch (error) {
-      console.error("Error al crear Project en Firestore. Insertando localmente:", error);
       setProjects((prev) => [
         ...prev,
         { ...newProject, projectId: 'local-' + Date.now() }
@@ -295,13 +276,10 @@ function App() {
   };
 
   const updateProject = async (id: string, updated: Partial<Project>) => {
-    console.log(`Actualizando Project ID: ${id} con:`, updated);
     try {
       const ref = doc(db, 'project', id);
       await updateDoc(ref, updated);
-      console.log("Proyecto actualizado en Firestore.");
     } catch (error) {
-      console.error("Error al actualizar Project en Firestore. Actualizando localmente:", error);
       setProjects((prev) =>
         prev.map((proj) => (proj.projectId === id ? { ...proj, ...updated } : proj))
       );
@@ -309,25 +287,18 @@ function App() {
   };
 
   const deleteProject = async (id: string) => {
-    console.log(`Eliminando Project ID: ${id} en Firestore...`);
     try {
       const ref = doc(db, 'project', id);
       await deleteDoc(ref);
-      console.log("Proyecto eliminado en Firestore.");
     } catch (error) {
-      console.error("Error al eliminar Project en Firestore. Eliminando localmente:", error);
       setProjects((prev) => prev.filter((proj) => proj.projectId !== id));
     }
   };
 
-  /* Métodos de CRUD para services */
   const createService = async (newService: Omit<Service, 'serviceId'>) => {
-    console.log("Intentando crear Service en Firestore:", newService);
     try {
-      const ref = await addDoc(collection(db, 'service'), newService);
-      console.log('Servicio creado en Firestore. ID:', ref.id);
+      await addDoc(collection(db, 'service'), newService);
     } catch (error) {
-      console.error("Error al crear Service en Firestore. Insertando localmente:", error);
       setServices((prev) => [
         ...prev,
         { ...newService, serviceId: 'local-' + Date.now() }
@@ -336,13 +307,10 @@ function App() {
   };
 
   const updateService = async (id: string, updated: Partial<Service>) => {
-    console.log(`Actualizando Service ID: ${id} con:`, updated);
     try {
       const ref = doc(db, 'service', id);
       await updateDoc(ref, updated);
-      console.log("Servicio actualizado en Firestore.");
     } catch (error) {
-      console.error("Error al actualizar Service en Firestore. Actualizando localmente:", error);
       setServices((prev) =>
         prev.map((serv) => (serv.serviceId === id ? { ...serv, ...updated } : serv))
       );
@@ -350,18 +318,14 @@ function App() {
   };
 
   const deleteService = async (id: string) => {
-    console.log(`Eliminando Service ID: ${id} en Firestore...`);
     try {
       const ref = doc(db, 'service', id);
       await deleteDoc(ref);
-      console.log("Servicio eliminado en Firestore.");
     } catch (error) {
-      console.error("Error al eliminar Service en Firestore. Eliminando localmente:", error);
       setServices((prev) => prev.filter((serv) => serv.serviceId !== id));
     }
   };
 
-  // Controlar el drawer
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
   };
@@ -378,13 +342,11 @@ function App() {
             <Typography variant="h6" sx={{ flexGrow: 1 }}>
               Presupuesto - Claro
             </Typography>
-            {/*
             {isAuthenticated && (
               <Typography sx={{ marginRight: 2 }}>
                 {currentUser?.email ?? 'Sin email'}
               </Typography>
             )}
-            */}
             <IconButton color="inherit">
               <SettingsIcon />
             </IconButton>
@@ -432,7 +394,6 @@ function App() {
         >
           <Toolbar />
           <Routes>
-            {/*
             <Route
               path="/login"
               element={<LoginPage />}
@@ -453,21 +414,6 @@ function App() {
                 ) : (
                   <LoginPage />
                 )
-              }
-            />
-            */}
-            <Route
-              path="/"
-              element={
-                <BudgetsPage
-                  budgets={budgets}
-                  accounts={accounts}
-                  projects={projects}
-                  services={services}
-                  createBudget={createBudget}
-                  updateBudget={updateBudget}
-                  deleteBudget={deleteBudget}
-                />
               }
             />
             <Route

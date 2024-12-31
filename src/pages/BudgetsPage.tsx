@@ -174,8 +174,6 @@ const BudgetsPage: React.FC<BudgetsPageProps> = ({
     setBudgetEntries(newEntries);
   };
   const getAvailableMonths = (index: number) => {
-    // Quitar restricciones si deseas permitir que varios BudgetEntries
-    // tengan el mismo mes; en este ejemplo se impide duplicar meses en distinto entry
     const selectedAll = budgetEntries.flatMap(e => e.months);
     return AVAILABLE_MONTHS.filter(
       m => !selectedAll.includes(m.value) || budgetEntries[index].months.includes(m.value)
