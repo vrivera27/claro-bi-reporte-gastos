@@ -113,7 +113,7 @@ const firebaseConfig = {
 async function pushAllBudgetsToBigQuery(allBudgets: Budget[]) {
   console.log('* Iniciando push de Budgets a BigQuery. Total:', allBudgets.length);
   try {
-    const response = await fetch('https://<your-region>-<your-project-id>.cloudfunctions.net/pushAllBudgetsToBigQuery', {
+    const response = await fetch('https://us-central1-claro-consumo-grafana-d.cloudfunctions.net/pushAllBudgetsToBigQuery', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
