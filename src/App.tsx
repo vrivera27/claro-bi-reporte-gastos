@@ -108,8 +108,13 @@ const firebaseConfig = {
 };
 
 function App() {
+  console.log("Inicializando la app con el siguiente config de Firebase:", firebaseConfig);
+
   const app = initializeApp(firebaseConfig);
+  console.log("Firebase app inicializado. Procediendo a obtener Firestore...");
+
   const db = getFirestore(app);
+  console.log("Firestore obtenido:", db);
 
   const [accounts, setAccounts] = useState<Account[]>(mockAccounts);
   const [projects, setProjects] = useState<Project[]>(mockProjects);
@@ -117,62 +122,77 @@ function App() {
   const [budgets, setBudgets] = useState<Budget[]>(mockBudgets);
   const [isMenuOpen, setIsMenuOpen] = useState(true);
 
+  // Función para cargar colecciones con onSnapshot
   const loadCollection = <T,>(
     collName: string,
     transform: (snap: QuerySnapshot<DocumentData>) => T[],
     setter: React.Dispatch<React.SetStateAction<T[]>>
   ) => {
+    console.log("Intentando cargar la colección:", collName);
+
     const unsub = onSnapshot(
       collection(db, collName),
-      snap => {
+      (snap) => {
+        console.log(`Snapshot recibido para la colección "${collName}". Cantidad de docs:`, snap.docs.length);
         const data = transform(snap);
+        console.log(`Data transformada para "${collName}":`, data);
         setter(data);
       },
-      error => {
-        console.error(`Error cargando ${collName}:`, error);
+      (error) => {
+        console.error(`Error cargando la colección "${collName}":`, error);
       }
     );
+
     return unsub;
   };
 
+  // Efecto para cargar datos de Firestore
   useEffect(() => {
+    console.log("useEffect -> Iniciando suscripciones a las colecciones de Firestore...");
+
     const unsubAcc = loadCollection<Account>(
       'account',
-      snap =>
-        snap.docs.map(doc => ({
+      (snap) =>
+        snap.docs.map((doc) => ({
           accountId: doc.id,
           ...(doc.data() as Pick<Account, 'name'>)
         })),
       setAccounts
     );
+
     const unsubProj = loadCollection<Project>(
       'project',
-      snap =>
-        snap.docs.map(doc => ({
+      (snap) =>
+        snap.docs.map((doc) => ({
           projectId: doc.id,
           ...(doc.data() as Omit<Project, 'projectId'>)
         })),
       setProjects
     );
+
     const unsubServ = loadCollection<Service>(
       'service',
-      snap =>
-        snap.docs.map(doc => ({
+      (snap) =>
+        snap.docs.map((doc) => ({
           serviceId: doc.id,
           ...(doc.data() as Pick<Service, 'name'>)
         })),
       setServices
     );
+
     const unsubBud = loadCollection<Budget>(
       'budget',
-      snap =>
-        snap.docs.map(doc => ({
+      (snap) =>
+        snap.docs.map((doc) => ({
           id: doc.id,
           ...(doc.data() as Omit<Budget, 'id'>)
         })),
       setBudgets
     );
+
+    // Cleanup
     return () => {
+      console.log("useEffect -> Desmontando suscripciones...");
       unsubAcc();
       unsubProj();
       unsubServ();
@@ -180,120 +200,163 @@ function App() {
     };
   }, [db]);
 
+  /* Métodos de CRUD para budgets */
   const createBudget = async (newBudget: Omit<Budget, 'id'>) => {
+    console.log("Intentando crear un nuevo Budget en Firestore:", newBudget);
     try {
       const ref = await addDoc(collection(db, 'budget'), newBudget);
-      console.log('Budget creado:', ref.id);
+      console.log('Budget creado en Firestore. ID:', ref.id);
     } catch (error) {
-      setBudgets(prev => [...prev, { ...newBudget, id: 'local-' + Date.now() }]);
-    }
-  };
-  const updateBudget = async (id: string, updated: Partial<Budget>) => {
-    try {
-      const ref = doc(db, 'budget', id);
-      await updateDoc(ref, updated);
-    } catch (error) {
-      setBudgets(prev =>
-        prev.map(b => (b.id === id ? { ...b, ...updated } : b))
-      );
-    }
-  };
-  const deleteBudget = async (id: string) => {
-    try {
-      const ref = doc(db, 'budget', id);
-      await deleteDoc(ref);
-    } catch (error) {
-      setBudgets(prev => prev.filter(b => b.id !== id));
+      console.error("Error al crear Budget en Firestore. Insertando localmente:", error);
+      setBudgets((prev) => [...prev, { ...newBudget, id: 'local-' + Date.now() }]);
     }
   };
 
+  const updateBudget = async (id: string, updated: Partial<Budget>) => {
+    console.log(`Intentando actualizar Budget ID: ${id} en Firestore con:`, updated);
+    try {
+      const ref = doc(db, 'budget', id);
+      await updateDoc(ref, updated);
+      console.log("Budget actualizado en Firestore.");
+    } catch (error) {
+      console.error("Error al actualizar Budget en Firestore. Actualizando localmente:", error);
+      setBudgets((prev) => prev.map((b) => (b.id === id ? { ...b, ...updated } : b)));
+    }
+  };
+
+  const deleteBudget = async (id: string) => {
+    console.log(`Intentando eliminar Budget ID: ${id} en Firestore...`);
+    try {
+      const ref = doc(db, 'budget', id);
+      await deleteDoc(ref);
+      console.log("Budget eliminado en Firestore.");
+    } catch (error) {
+      console.error("Error al eliminar Budget en Firestore. Eliminando localmente:", error);
+      setBudgets((prev) => prev.filter((b) => b.id !== id));
+    }
+  };
+
+  /* Métodos de CRUD para accounts */
   const createAccount = async (newAccount: Account) => {
+    console.log("Intentando crear Account en Firestore:", newAccount);
     try {
       const ref = await addDoc(collection(db, 'account'), newAccount);
-      console.log('Cuenta creada:', ref.id);
+      console.log('Cuenta creada en Firestore. ID:', ref.id);
     } catch (error) {
-      setAccounts(prev => [...prev, newAccount]);
-    }
-  };
-  const updateAccount = async (id: string, updated: Partial<Account>) => {
-    try {
-      const ref = doc(db, 'account', id);
-      await updateDoc(ref, updated);
-    } catch (error) {
-      setAccounts(prev =>
-        prev.map(acc => (acc.accountId === id ? { ...acc, ...updated } : acc))
-      );
-    }
-  };
-  const deleteAccount = async (id: string) => {
-    try {
-      const ref = doc(db, 'account', id);
-      await deleteDoc(ref);
-    } catch (error) {
-      setAccounts(prev => prev.filter(acc => acc.accountId !== id));
+      console.error("Error al crear Account en Firestore. Insertando localmente:", error);
+      setAccounts((prev) => [...prev, newAccount]);
     }
   };
 
+  const updateAccount = async (id: string, updated: Partial<Account>) => {
+    console.log(`Actualizando Account ID: ${id} en Firestore con:`, updated);
+    try {
+      const ref = doc(db, 'account', id);
+      await updateDoc(ref, updated);
+      console.log("Cuenta actualizada en Firestore.");
+    } catch (error) {
+      console.error("Error al actualizar Account en Firestore. Actualizando localmente:", error);
+      setAccounts((prev) =>
+        prev.map((acc) => (acc.accountId === id ? { ...acc, ...updated } : acc))
+      );
+    }
+  };
+
+  const deleteAccount = async (id: string) => {
+    console.log(`Eliminando Account ID: ${id} en Firestore...`);
+    try {
+      const ref = doc(db, 'account', id);
+      await deleteDoc(ref);
+      console.log("Cuenta eliminada en Firestore.");
+    } catch (error) {
+      console.error("Error al eliminar Account en Firestore. Eliminando localmente:", error);
+      setAccounts((prev) => prev.filter((acc) => acc.accountId !== id));
+    }
+  };
+
+  /* Métodos de CRUD para projects */
   const createProject = async (newProject: Omit<Project, 'projectId'>) => {
+    console.log("Intentando crear Project en Firestore:", newProject);
     try {
       const ref = await addDoc(collection(db, 'project'), newProject);
-      console.log('Proyecto creado:', ref.id);
+      console.log('Proyecto creado en Firestore. ID:', ref.id);
     } catch (error) {
-      setProjects(prev => [
+      console.error("Error al crear Project en Firestore. Insertando localmente:", error);
+      setProjects((prev) => [
         ...prev,
         { ...newProject, projectId: 'local-' + Date.now() }
       ]);
     }
   };
+
   const updateProject = async (id: string, updated: Partial<Project>) => {
+    console.log(`Actualizando Project ID: ${id} con:`, updated);
     try {
       const ref = doc(db, 'project', id);
       await updateDoc(ref, updated);
+      console.log("Proyecto actualizado en Firestore.");
     } catch (error) {
-      setProjects(prev =>
-        prev.map(proj => (proj.projectId === id ? { ...proj, ...updated } : proj))
+      console.error("Error al actualizar Project en Firestore. Actualizando localmente:", error);
+      setProjects((prev) =>
+        prev.map((proj) => (proj.projectId === id ? { ...proj, ...updated } : proj))
       );
     }
   };
+
   const deleteProject = async (id: string) => {
+    console.log(`Eliminando Project ID: ${id} en Firestore...`);
     try {
       const ref = doc(db, 'project', id);
       await deleteDoc(ref);
+      console.log("Proyecto eliminado en Firestore.");
     } catch (error) {
-      setProjects(prev => prev.filter(proj => proj.projectId !== id));
+      console.error("Error al eliminar Project en Firestore. Eliminando localmente:", error);
+      setProjects((prev) => prev.filter((proj) => proj.projectId !== id));
     }
   };
 
+  /* Métodos de CRUD para services */
   const createService = async (newService: Omit<Service, 'serviceId'>) => {
+    console.log("Intentando crear Service en Firestore:", newService);
     try {
       const ref = await addDoc(collection(db, 'service'), newService);
-      console.log('Servicio creado:', ref.id);
+      console.log('Servicio creado en Firestore. ID:', ref.id);
     } catch (error) {
-      setServices(prev => [
+      console.error("Error al crear Service en Firestore. Insertando localmente:", error);
+      setServices((prev) => [
         ...prev,
         { ...newService, serviceId: 'local-' + Date.now() }
       ]);
     }
   };
+
   const updateService = async (id: string, updated: Partial<Service>) => {
+    console.log(`Actualizando Service ID: ${id} con:`, updated);
     try {
       const ref = doc(db, 'service', id);
       await updateDoc(ref, updated);
+      console.log("Servicio actualizado en Firestore.");
     } catch (error) {
-      setServices(prev =>
-        prev.map(serv => (serv.serviceId === id ? { ...serv, ...updated } : serv))
+      console.error("Error al actualizar Service en Firestore. Actualizando localmente:", error);
+      setServices((prev) =>
+        prev.map((serv) => (serv.serviceId === id ? { ...serv, ...updated } : serv))
       );
     }
   };
+
   const deleteService = async (id: string) => {
+    console.log(`Eliminando Service ID: ${id} en Firestore...`);
     try {
       const ref = doc(db, 'service', id);
       await deleteDoc(ref);
+      console.log("Servicio eliminado en Firestore.");
     } catch (error) {
-      setServices(prev => prev.filter(serv => serv.serviceId !== id));
+      console.error("Error al eliminar Service en Firestore. Eliminando localmente:", error);
+      setServices((prev) => prev.filter((serv) => serv.serviceId !== id));
     }
   };
 
+  // Controlar el drawer
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
   };
@@ -315,6 +378,7 @@ function App() {
             </IconButton>
           </Toolbar>
         </AppBar>
+
         <Drawer variant="persistent" anchor="left" open={isMenuOpen}>
           <Box sx={{ display: 'flex', alignItems: 'center', padding: '0.5rem' }}>
             <IconButton onClick={toggleMenu}>
@@ -344,6 +408,7 @@ function App() {
             </ListItem>
           </List>
         </Drawer>
+
         <Box
           component="main"
           sx={{
