@@ -116,9 +116,15 @@ async function pushAllBudgetsToBigQuery(allBudgets: Budget[]) {
     projectId: 'claro-consumo-grafana-d',
     keyFilename: 'service-account.json'
   });
-  await bigquery.dataset('billing_reports').table('budget').delete();
-  await bigquery.dataset('billing_reports').table('budget').insert(allBudgets);
-  console.log('* Finalizado push de Budgets a BigQuery.');
+  try {
+    console.log('* Eliminando datos existentes en BigQuery...');
+    await bigquery.dataset('billing_reports').table('budget').delete();
+    console.log('* Insertando nuevos datos en BigQuery...');
+    await bigquery.dataset('billing_reports').table('budget').insert(allBudgets);
+    console.log('* Finalizado push de Budgets a BigQuery.');
+  } catch (error) {
+    console.error('* Error durante el push a BigQuery:', error);
+  }
 }
 
 function App() {
@@ -204,44 +210,56 @@ function App() {
 
   const createBudget = async (newBudget: Omit<Budget, 'id'>) => {
     try {
+      console.log('* Creando nuevo Budget en Firestore:', newBudget);
       await addDoc(collection(db, 'budget'), newBudget);
+      console.log('* Obteniendo todos los Budgets de Firestore...');
       const querySnapshot = await getDocs(collection(db, 'budget'));
       const allBudgets = querySnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data()
       })) as Budget[];
+      console.log('* Push de todos los Budgets a BigQuery...');
       await pushAllBudgetsToBigQuery(allBudgets);
     } catch (error) {
+      console.error('* Error al crear Budget:', error);
       setBudgets((prev) => [...prev, { ...newBudget, id: 'local-' + Date.now() }]);
     }
   };
 
   const updateBudget = async (id: string, updated: Partial<Budget>) => {
     try {
+      console.log(`* Actualizando Budget ID: ${id} en Firestore con:`, updated);
       const ref = doc(db, 'budget', id);
       await updateDoc(ref, updated);
+      console.log('* Obteniendo todos los Budgets de Firestore...');
       const querySnapshot = await getDocs(collection(db, 'budget'));
       const allBudgets = querySnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data()
       })) as Budget[];
+      console.log('* Push de todos los Budgets a BigQuery...');
       await pushAllBudgetsToBigQuery(allBudgets);
     } catch (error) {
+      console.error('* Error al actualizar Budget:', error);
       setBudgets((prev) => prev.map((b) => (b.id === id ? { ...b, ...updated } : b)));
     }
   };
 
   const deleteBudget = async (id: string) => {
     try {
+      console.log(`* Eliminando Budget ID: ${id} en Firestore...`);
       const ref = doc(db, 'budget', id);
       await deleteDoc(ref);
+      console.log('* Obteniendo todos los Budgets de Firestore...');
       const querySnapshot = await getDocs(collection(db, 'budget'));
       const allBudgets = querySnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data()
       })) as Budget[];
+      console.log('* Push de todos los Budgets a BigQuery...');
       await pushAllBudgetsToBigQuery(allBudgets);
     } catch (error) {
+      console.error('* Error al eliminar Budget:', error);
       setBudgets((prev) => prev.filter((b) => b.id !== id));
     }
   };
